@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Laberinto del Tiempo - Alicia</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(135deg, #c6a3ff, #ffb8e6);
+      font-family: 'Trebuchet MS', sans-serif;
+      color: #fff;
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-image: url('https://i.imgur.com/pLMJ6Ap.png'); /* fondo tipo laberinto */
+      background-size: cover;
+      background-position: center;
+      overflow: hidden;
+    }
+
+    #player {
+      position: absolute;
+      width: 40px;
+      height: 60px;
+      background-image: url('https://i.imgur.com/1jsy8cC.png'); /* Alicia */
+      background-size: cover;
+      left: 50px;
+      top: 50px;
+      transition: transform 0.3s;
+    }
+
+    #potion {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-image: url('https://i.imgur.com/MR3XOiP.png'); /* poción */
+      background-size: cover;
+      left: 400px;
+      top: 300px;
+    }
+
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 22px;
+      background: rgba(0,0,0,0.4);
+      padding: 10px 15px;
+      border-radius: 10px;
+    }
+
+    #message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      text-align: center;
+      display: none;
+      background: rgba(0,0,0,0.6);
+      padding: 20px;
+      border-radius: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="player"></div>
+    <div id="potion"></div>
+    <div id="hud">⏰ Tiempo: <span id="timer">60</span>s</div>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const player = document.getElementById('player');
+    const potion = document.getElementById('potion');
+    const message = document.getElementById('message');
+    const timerEl = document.getElementById('timer');
+
+    let posX = 50, posY = 50;
+    let speed = 10;
+    let timeLeft = 60;
+    let size = 1;
+    let gameOver = false;
+
+    // Movimiento de Alicia
+    document.addEventListener('keydown', (e) => {
+      if (gameOver) return;
+      if (e.key === 'ArrowUp' || e.key === 'w') posY -= speed;
+      if (e.key === 'ArrowDown' || e.key === 's') posY += speed;
+      if (e.key === 'ArrowLeft' || e.key === 'a') posX -= speed;
+      if (e.key === 'ArrowRight' || e.key === 'd') posX += speed;
+      player.style.left = posX + 'px';
+      player.style.top = posY + 'px';
+      checkPotionCollision();
+    });
+
+    // Alicia crece con el tiempo
+    setInterval(() => {
+      if (gameOver) return;
+      size += 0.05;
+      player.style.transform = `scale(${size})`;
+      if (size >= 2) endGame('Alicia creció demasiado y quedó atrapada 😢');
+    }, 4000);
+
+    // Temporizador
+    const countdown = setInterval(() => {
+      if (gameOver) return;
+      timeLeft--;
+      timerEl.textContent = timeLeft;
+      if (timeLeft <= 0) endGame('¡El tiempo se acabó! ⏳');
+    }, 1000);
+
+    // Colisión con la poción
+    function checkPotionCollision() {
+      const playerRect = player.getBoundingClientRect();
+      const potionRect = potion.getBoundingClientRect();
+      if (
+        playerRect.x < potionRect.x + potionRect.width &&
+        playerRect.x + playerRect.width > potionRect.x &&
+        playerRect.y < potionRect.y + potionRect.height &&
+        playerRect.y + playerRect.height > potionRect.y
+      ) {
+        potion.style.display = 'none';
+        size = 1;
+        player.style.transform = 'scale(1)';
+        timeLeft += 10;
+        timerEl.textContent = timeLeft;
+        showTempMessage('✨ ¡Alicia se hizo pequeña otra vez! +10s ✨');
+      }
+    }
+
+    // Mensajes
+    function endGame(text) {
+      gameOver = true;
+      message.style.display = 'block';
+      message.textContent = text;
+      clearInterval(countdown);
+    }
+
+    function showTempMessage(text) {
+      message.style.display = 'block';
+      message.textContent = text;
+      setTimeout(() => message.style.display = 'none', 2000);
+    }
+  </script>
+</body>
+</html>

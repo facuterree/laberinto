@@ -1,2 +1,0 @@
-# laberinto
-laberinto de alicia
