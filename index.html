@@ -1,217 +1,195 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>El Laberinto del Tiempo - Alicia</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      background-color: #000;
-      font-family: 'Trebuchet MS', sans-serif;
-      color: #fff;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laberinto de Alicia</title>
+<style>
+  body {
+    margin: 0;
+    background-color: #000;
+    font-family: sans-serif;
+    overflow: hidden;
+  }
 
-    #game {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      background-color: #000;
-      overflow: hidden;
-    }
+  #game {
+    position: relative;
+    width: 800px;
+    height: 800px;
+    margin: 20px auto;
+    background-color: #111;
+    border: 3px solid #fff;
+  }
 
-    .wall {
-      position: absolute;
-      background-color: #222;
-      border: 2px solid #555;
-      box-shadow: 0 0 10px #ffb6f9;
-      border-radius: 5px;
-    }
+  .wall {
+    position: absolute;
+    background-color: #333;
+    border: 2px solid #555;
+  }
 
-    #player {
-      position: absolute;
-      width: 60px;
-      height: 60px;
-      background-image: url('https://i.imgur.com/NX7cT1b.png'); /* Cara de Alicia */
-      background-size: cover;
-      left: 50px;
-      top: 50px;
-      transition: transform 0.3s;
-      border-radius: 50%;
-      box-shadow: 0 0 20px #ffccff;
-      z-index: 5;
-    }
+  .potion {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    font-size: 24px;
+    text-align: center;
+    line-height: 30px;
+  }
 
-    #potion {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      background-image: url('https://i.imgur.com/MR3XOiP.png');
-      background-size: cover;
-      left: 850px;
-      top: 350px;
-      z-index: 3;
-    }
+  #player {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    font-size: 32px;
+    text-align: center;
+    line-height: 40px;
+  }
 
-    #hud {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      font-size: 22px;
-      background: rgba(0,0,0,0.6);
-      padding: 10px 15px;
-      border-radius: 10px;
-    }
+  #exit {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    font-size: 48px;
+    text-align: center;
+    line-height: 50px;
+  }
 
-    #message {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 40px;
-      text-align: center;
-      display: none;
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px #ffb6f9;
-    }
-  </style>
+  #hud {
+    color: #fff;
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  #message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 32px;
+    text-align: center;
+    display: none;
+    background: rgba(0,0,0,0.8);
+    padding: 20px;
+    border-radius: 15px;
+  }
+</style>
 </head>
 <body>
-  <div id="game">
-    <div id="player"></div>
-    <div id="potion"></div>
-    <div id="hud">⏰ Tiempo: <span id="timer">60</span>s</div>
-    <div id="message"></div>
+<div id="hud">⏰ Tiempo: <span id="timer">60</span>s</div>
+<div id="game">
+  <div id="player">👧</div>
+  <div id="exit">🚪</div>
+  <div class="potion" style="left:150px; top:150px;">💧</div>
+  <div class="potion" style="left:600px; top:100px;">💧</div>
+  <div class="potion" style="left:300px; top:600px;">💧</div>
+  <div class="potion" style="left:700px; top:700px;">💧</div>
+  <div class="wall" style="left:0; top:0; width:800px; height:20px;"></div>
+  <div class="wall" style="left:0; top:0; width:20px; height:800px;"></div>
+  <div class="wall" style="left:0; bottom:0; width:800px; height:20px;"></div>
+  <div class="wall" style="right:0; top:0; width:20px; height:800px;"></div>
+  <!-- Pasillos internos -->
+  <div class="wall" style="left:100px; top:100px; width:600px; height:20px;"></div>
+  <div class="wall" style="left:100px; top:100px; width:20px; height:600px;"></div>
+  <div class="wall" style="left:680px; top:100px; width:20px; height:600px;"></div>
+  <div class="wall" style="left:100px; top:680px; width:600px; height:20px;"></div>
+  <div class="wall" style="left:300px; top:200px; width:20px; height:400px;"></div>
+  <div class="wall" style="left:500px; top:200px; width:20px; height:400px;"></div>
+</div>
+<div id="message"></div>
+<script>
+const player = document.getElementById('player');
+const exit = document.getElementById('exit');
+const potions = document.querySelectorAll('.potion');
+const walls = document.querySelectorAll('.wall');
+const timerEl = document.getElementById('timer');
+const message = document.getElementById('message');
 
-    <!-- Paredes del laberinto -->
-    <div class="wall" style="left:0; top:0; width:100%; height:20px;"></div>
-    <div class="wall" style="left:0; bottom:0; width:100%; height:20px;"></div>
-    <div class="wall" style="left:0; top:0; width:20px; height:100%;"></div>
-    <div class="wall" style="right:0; top:0; width:20px; height:100%;"></div>
+let posX = 50, posY = 50;
+let speed = 10;
+let size = 1;
+let timeLeft = 60;
+let gameOver = false;
 
-    <!-- Pasillos internos -->
-    <div class="wall" style="left:100px; top:100px; width:400px; height:20px;"></div>
-    <div class="wall" style="left:100px; top:100px; width:20px; height:300px;"></div>
-    <div class="wall" style="left:480px; top:100px; width:20px; height:250px;"></div>
-    <div class="wall" style="left:200px; top:380px; width:300px; height:20px;"></div>
-    <div class="wall" style="left:600px; top:150px; width:20px; height:300px;"></div>
-    <div class="wall" style="left:600px; top:150px; width:300px; height:20px;"></div>
-    <div class="wall" style="left:900px; top:150px; width:20px; height:400px;"></div>
-    <div class="wall" style="left:700px; top:530px; width:200px; height:20px;"></div>
-  </div>
+player.style.left = posX + 'px';
+player.style.top = posY + 'px';
+exit.style.left = '720px';
+exit.style.top = '720px';
 
-  <script>
-    const player = document.getElementById('player');
-    const potion = document.getElementById('potion');
-    const message = document.getElementById('message');
-    const timerEl = document.getElementById('timer');
-    const walls = document.querySelectorAll('.wall');
-
-    let posX = 50, posY = 50;
-    let speed = 10;
-    let timeLeft = 60;
-    let size = 1;
-    let gameOver = false;
-
-    // Movimiento con detección de colisiones
-    document.addEventListener('keydown', (e) => {
-      if (gameOver) return;
-      let nextX = posX;
-      let nextY = posY;
-
-      if (e.key === 'ArrowUp' || e.key === 'w') nextY -= speed;
-      if (e.key === 'ArrowDown' || e.key === 's') nextY += speed;
-      if (e.key === 'ArrowLeft' || e.key === 'a') nextX -= speed;
-      if (e.key === 'ArrowRight' || e.key === 'd') nextX += speed;
-
-      if (!checkCollision(nextX, nextY)) {
-        posX = nextX;
-        posY = nextY;
-        player.style.left = posX + 'px';
-        player.style.top = posY + 'px';
-        checkPotionCollision();
-      }
-    });
-
-    function checkCollision(x, y) {
-      const playerRect = {
-        left: x,
-        right: x + player.offsetWidth,
-        top: y,
-        bottom: y + player.offsetHeight
-      };
-      for (const wall of walls) {
-        const r = wall.getBoundingClientRect();
-        const g = player.parentElement.getBoundingClientRect();
-        const wallRect = {
-          left: r.left - g.left,
-          right: r.right - g.left,
-          top: r.top - g.top,
-          bottom: r.bottom - g.top
-        };
-        if (
-          playerRect.left < wallRect.right &&
-          playerRect.right > wallRect.left &&
-          playerRect.top < wallRect.bottom &&
-          playerRect.bottom > wallRect.top
-        ) {
-          return true;
-        }
-      }
-      return false;
+function checkCollision(x, y) {
+  const playerRect = {left:x, top:y, right:x+40*size, bottom:y+40*size};
+  for(const wall of walls){
+    const rect = wall.getBoundingClientRect();
+    const g = wall.parentElement.getBoundingClientRect();
+    const wallRect = {left:rect.left-g.left, top:rect.top-g.top, right:rect.right-g.left, bottom:rect.bottom-g.top};
+    if(playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top){
+      return true;
     }
+  }
+  return false;
+}
 
-    // Alicia crece con el tiempo
-    setInterval(() => {
-      if (gameOver) return;
-      size += 0.05;
-      player.style.transform = `scale(${size})`;
-      if (size >= 2) endGame('Alicia creció demasiado y quedó atrapada 😢');
-    }, 4000);
+document.addEventListener('keydown', e => {
+  if(gameOver) return;
+  let nextX = posX;
+  let nextY = posY;
+  if(e.key==='ArrowUp'||e.key==='w') nextY-=speed;
+  if(e.key==='ArrowDown'||e.key==='s') nextY+=speed;
+  if(e.key==='ArrowLeft'||e.key==='a') nextX-=speed;
+  if(e.key==='ArrowRight'||e.key==='d') nextX+=speed;
+  if(!checkCollision(nextX,nextY)){
+    posX=nextX; posY=nextY;
+    player.style.left=posX+'px';
+    player.style.top=posY+'px';
+    checkPotion();
+    checkExit();
+  }
+});
 
-    // Temporizador
-    const countdown = setInterval(() => {
-      if (gameOver) return;
-      timeLeft--;
-      timerEl.textContent = timeLeft;
-      if (timeLeft <= 0) endGame('¡El tiempo se acabó! ⏳');
-    }, 1000);
-
-    // Colisión con la poción
-    function checkPotionCollision() {
-      const playerRect = player.getBoundingClientRect();
-      const potionRect = potion.getBoundingClientRect();
-      if (
-        playerRect.x < potionRect.x + potionRect.width &&
-        playerRect.x + playerRect.width > potionRect.x &&
-        playerRect.y < potionRect.y + potionRect.height &&
-        playerRect.y + playerRect.height > potionRect.y
-      ) {
-        potion.style.display = 'none';
-        size = 1;
-        player.style.transform = 'scale(1)';
-        timeLeft += 10;
-        timerEl.textContent = timeLeft;
-        showTempMessage('✨ ¡Alicia se hizo pequeña otra vez! +10s ✨');
-      }
+function checkPotion(){
+  const pRect = player.getBoundingClientRect();
+  potions.forEach(p=>{
+    const rect = p.getBoundingClientRect();
+    if(p.style.display!=='none' && pRect.x<pRect.width+rect.x && pRect.x+pRect.width>rect.x && pRect.y<pRect.height+rect.y && pRect.y+pRect.height>rect.y){
+      p.style.display='none';
+      size=1; player.style.transform='scale(1)';
+      timeLeft+=10; timerEl.textContent=timeLeft;
     }
+  });
+}
 
-    // Mensajes
-    function endGame(text) {
-      gameOver = true;
-      message.style.display = 'block';
-      message.textContent = text;
-      clearInterval(countdown);
-    }
+function checkExit(){
+  const pRect = player.getBoundingClientRect();
+  const eRect = exit.getBoundingClientRect();
+  if(pRect.x<pRect.width+eRect.x && pRect.x+pRect.width>eRect.x && pRect.y<pRect.height+eRect.y && pRect.y+pRect.height>eRect.y){
+    gameOver=true;
+    message.style.display='block';
+    message.textContent='🎉 ¡Felicidades, lograste que Alicia salga del laberinto!';
+  }
+}
 
-    function showTempMessage(text) {
-      message.style.display = 'block';
-      message.textContent = text;
-      setTimeout(() => message.style.display = 'none', 2000);
-    }
-  </script>
+const growthInterval = setInterval(()=>{
+  if(gameOver) return;
+  size+=0.05;
+  player.style.transform='scale('+size+')';
+  if(size>=2){
+    gameOver=true;
+    message.style.display='block';
+    message.textContent='😢 Alicia creció demasiado y quedó atrapada';
+  }
+},4000);
+
+const timerInterval = setInterval(()=>{
+  if(gameOver) return;
+  timeLeft--;
+  timerEl.textContent=timeLeft;
+  if(timeLeft<=0){
+    gameOver=true;
+    message.style.display='block';
+    message.textContent='⏰ Se acabó el tiempo, Alicia quedó atrapada';
+  }
+},1000);
+</script>
 </body>
 </html>
