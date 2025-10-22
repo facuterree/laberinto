@@ -8,7 +8,7 @@
     body {
       margin: 0;
       overflow: hidden;
-      background: linear-gradient(135deg, #c6a3ff, #ffb8e6);
+      background-color: #000; /* Fondo negro */
       font-family: 'Trebuchet MS', sans-serif;
       color: #fff;
     }
@@ -17,21 +17,21 @@
       position: relative;
       width: 100vw;
       height: 100vh;
-      background-image: url('https://i.imgur.com/pLMJ6Ap.png'); /* fondo tipo laberinto */
-      background-size: cover;
-      background-position: center;
+      background-color: #000;
       overflow: hidden;
     }
 
     #player {
       position: absolute;
-      width: 40px;
+      width: 60px;
       height: 60px;
-      background-image: url('https://i.imgur.com/1jsy8cC.png'); /* Alicia */
+      background-image: url('https://i.imgur.com/NX7cT1b.png'); /* Cara de Alicia */
       background-size: cover;
       left: 50px;
       top: 50px;
       transition: transform 0.3s;
+      border-radius: 50%;
+      box-shadow: 0 0 20px #ffccff;
     }
 
     #potion {
@@ -49,7 +49,7 @@
       top: 10px;
       left: 10px;
       font-size: 22px;
-      background: rgba(0,0,0,0.4);
+      background: rgba(0,0,0,0.6);
       padding: 10px 15px;
       border-radius: 10px;
     }
@@ -62,9 +62,10 @@
       font-size: 40px;
       text-align: center;
       display: none;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
       padding: 20px;
       border-radius: 15px;
+      box-shadow: 0 0 20px #ffb6f9;
     }
   </style>
 </head>
