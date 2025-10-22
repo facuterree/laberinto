@@ -8,7 +8,7 @@
     body {
       margin: 0;
       overflow: hidden;
-      background-color: #000; /* Fondo negro */
+      background-color: #000;
       font-family: 'Trebuchet MS', sans-serif;
       color: #fff;
     }
@@ -19,6 +19,14 @@
       height: 100vh;
       background-color: #000;
       overflow: hidden;
+    }
+
+    .wall {
+      position: absolute;
+      background-color: #222;
+      border: 2px solid #555;
+      box-shadow: 0 0 10px #ffb6f9;
+      border-radius: 5px;
     }
 
     #player {
@@ -32,16 +40,18 @@
       transition: transform 0.3s;
       border-radius: 50%;
       box-shadow: 0 0 20px #ffccff;
+      z-index: 5;
     }
 
     #potion {
       position: absolute;
       width: 30px;
       height: 30px;
-      background-image: url('https://i.imgur.com/MR3XOiP.png'); /* poción */
+      background-image: url('https://i.imgur.com/MR3XOiP.png');
       background-size: cover;
-      left: 400px;
-      top: 300px;
+      left: 850px;
+      top: 350px;
+      z-index: 3;
     }
 
     #hud {
@@ -75,6 +85,22 @@
     <div id="potion"></div>
     <div id="hud">⏰ Tiempo: <span id="timer">60</span>s</div>
     <div id="message"></div>
+
+    <!-- Paredes del laberinto -->
+    <div class="wall" style="left:0; top:0; width:100%; height:20px;"></div>
+    <div class="wall" style="left:0; bottom:0; width:100%; height:20px;"></div>
+    <div class="wall" style="left:0; top:0; width:20px; height:100%;"></div>
+    <div class="wall" style="right:0; top:0; width:20px; height:100%;"></div>
+
+    <!-- Pasillos internos -->
+    <div class="wall" style="left:100px; top:100px; width:400px; height:20px;"></div>
+    <div class="wall" style="left:100px; top:100px; width:20px; height:300px;"></div>
+    <div class="wall" style="left:480px; top:100px; width:20px; height:250px;"></div>
+    <div class="wall" style="left:200px; top:380px; width:300px; height:20px;"></div>
+    <div class="wall" style="left:600px; top:150px; width:20px; height:300px;"></div>
+    <div class="wall" style="left:600px; top:150px; width:300px; height:20px;"></div>
+    <div class="wall" style="left:900px; top:150px; width:20px; height:400px;"></div>
+    <div class="wall" style="left:700px; top:530px; width:200px; height:20px;"></div>
   </div>
 
   <script>
@@ -82,6 +108,7 @@
     const potion = document.getElementById('potion');
     const message = document.getElementById('message');
     const timerEl = document.getElementById('timer');
+    const walls = document.querySelectorAll('.wall');
 
     let posX = 50, posY = 50;
     let speed = 10;
@@ -89,17 +116,53 @@
     let size = 1;
     let gameOver = false;
 
-    // Movimiento de Alicia
+    // Movimiento con detección de colisiones
     document.addEventListener('keydown', (e) => {
       if (gameOver) return;
-      if (e.key === 'ArrowUp' || e.key === 'w') posY -= speed;
-      if (e.key === 'ArrowDown' || e.key === 's') posY += speed;
-      if (e.key === 'ArrowLeft' || e.key === 'a') posX -= speed;
-      if (e.key === 'ArrowRight' || e.key === 'd') posX += speed;
-      player.style.left = posX + 'px';
-      player.style.top = posY + 'px';
-      checkPotionCollision();
+      let nextX = posX;
+      let nextY = posY;
+
+      if (e.key === 'ArrowUp' || e.key === 'w') nextY -= speed;
+      if (e.key === 'ArrowDown' || e.key === 's') nextY += speed;
+      if (e.key === 'ArrowLeft' || e.key === 'a') nextX -= speed;
+      if (e.key === 'ArrowRight' || e.key === 'd') nextX += speed;
+
+      if (!checkCollision(nextX, nextY)) {
+        posX = nextX;
+        posY = nextY;
+        player.style.left = posX + 'px';
+        player.style.top = posY + 'px';
+        checkPotionCollision();
+      }
     });
+
+    function checkCollision(x, y) {
+      const playerRect = {
+        left: x,
+        right: x + player.offsetWidth,
+        top: y,
+        bottom: y + player.offsetHeight
+      };
+      for (const wall of walls) {
+        const r = wall.getBoundingClientRect();
+        const g = player.parentElement.getBoundingClientRect();
+        const wallRect = {
+          left: r.left - g.left,
+          right: r.right - g.left,
+          top: r.top - g.top,
+          bottom: r.bottom - g.top
+        };
+        if (
+          playerRect.left < wallRect.right &&
+          playerRect.right > wallRect.left &&
+          playerRect.top < wallRect.bottom &&
+          playerRect.bottom > wallRect.top
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
 
     // Alicia crece con el tiempo
     setInterval(() => {
