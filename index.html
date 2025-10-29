@@ -3,37 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laberinto de Alicia</title>
+<title>Laberinto de Alicia (aleatorio)</title>
 <style>
   body {
     margin: 0;
     background-color: #000;
-    font-family: "Trebuchet MS", sans-serif;
+    font-family: 'Trebuchet MS', sans-serif;
     overflow: hidden;
-  }
-
-  #hud {
-    color: #fff;
-    font-size: 20px;
-    text-align: center;
-    margin-top: 10px;
+    color: white;
   }
 
   #game {
     position: relative;
-    width: 900px;
-    height: 900px;
+    width: 800px;
+    height: 800px;
     margin: 20px auto;
-    background: url('https://i.imgur.com/qyjZs5U.jpeg') no-repeat center center/cover;
     border: 3px solid #fff;
-    box-shadow: 0 0 25px #0ff;
-    overflow: hidden;
+    background-image: url('https://i.imgur.com/jJ8rWvW.jpeg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 0 40px rgba(255,255,255,0.3);
   }
 
   .wall {
     position: absolute;
-    background-color: rgba(40,40,40,0.8);
-    border: 1px solid #777;
+    background-color: rgba(20, 20, 20, 0.85);
+    border: 2px solid #555;
   }
 
   .potion {
@@ -52,7 +47,7 @@
     font-size: 32px;
     text-align: center;
     line-height: 40px;
-    transition: transform 0.3s, filter 0.3s;
+    transition: transform 0.2s ease;
   }
 
   #exit {
@@ -64,260 +59,251 @@
     line-height: 50px;
   }
 
+  #hud {
+    color: #fff;
+    font-size: 20px;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
   #message {
     position: absolute;
-    top: 45%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: #fff;
     font-size: 32px;
     text-align: center;
     display: none;
-    background: rgba(0,0,0,0.85);
+    background: rgba(0,0,0,0.8);
     padding: 20px;
     border-radius: 15px;
   }
 
-  #restart {
-    display: none;
+  #countdown {
     position: absolute;
-    top: 63%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: #222;
+    font-size: 64px;
     color: #fff;
-    border: 2px solid #fff;
-    padding: 10px 20px;
-    font-size: 20px;
-    border-radius: 10px;
-    cursor: pointer;
-  }
-
-  #restart:hover {
-    background-color: #444;
+    background: rgba(0,0,0,0.7);
+    padding: 20px 40px;
+    border-radius: 20px;
   }
 </style>
 </head>
 <body>
-<div id="hud">⏰ Tiempo: <span id="timer">60</span>s | Nivel: <span id="level">1</span>/4</div>
-<div id="game"></div>
-<div id="message"></div>
-<button id="restart">🔁 Reiniciar</button>
+<div id="hud">
+  ⏰ Tiempo: <span id="timer">15</span>s — Nivel: <span id="level">1</span>
+</div>
+<div id="game">
+  <div id="player">👧</div>
+  <div id="exit">🚪</div>
+  <div id="message"></div>
+  <div id="countdown">3</div>
+</div>
 
 <script>
 const game = document.getElementById('game');
+const player = document.getElementById('player');
+const exit = document.getElementById('exit');
 const timerEl = document.getElementById('timer');
-const message = document.getElementById('message');
-const restartBtn = document.getElementById('restart');
 const levelEl = document.getElementById('level');
+const message = document.getElementById('message');
+const countdown = document.getElementById('countdown');
 
-let posX, posY, player, exit, walls = [], potions = [];
-let baseSpeed = 10;
+let posX = 50, posY = 50;
+let speed = 10;
 let size = 1;
-let timeLeft = 60;
-let level = 1;
+let timeLeft = 15;
 let gameOver = false;
+let level = 1;
+let potionTimer = null;
+let growing = null;
+let playing = false;
 
-const levelConfigs = [
-  { // Nivel 1: básico y grande
-    width: 900, height: 900, exit:{x:800,y:800},
-    walls:[
-      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
-      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
-      {x:250,y:200,w:20,h:500},{x:450,y:200,w:20,h:500},{x:650,y:200,w:20,h:500}
-    ],
-    potions:[
-      {x:150,y:150},{x:250,y:250},{x:400,y:150},{x:600,y:300},{x:700,y:700},{x:500,y:500},{x:800,y:200}
-    ]
-  },
-  { // Nivel 2
-    width: 900, height: 900, exit:{x:820,y:820},
-    walls:[
-      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
-      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
-      {x:300,y:200,w:20,h:500},{x:500,y:300,w:20,h:400},{x:200,y:400,w:600,h:20}
-    ],
-    potions:[
-      {x:150,y:150},{x:350,y:250},{x:550,y:450},{x:650,y:650},{x:700,y:300},{x:250,y:600}
-    ]
-  },
-  { // Nivel 3
-    width: 900, height: 900, exit:{x:820,y:820},
-    walls:[
-      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
-      {x:150,y:150,w:600,h:20},{x:150,y:150,w:20,h:600},{x:750,y:150,w:20,h:600},{x:150,y:750,w:600,h:20},
-      {x:350,y:200,w:20,h:500},{x:550,y:200,w:20,h:500},{x:250,y:400,w:400,h:20}
-    ],
-    potions:[
-      {x:200,y:200},{x:300,y:300},{x:400,y:500},{x:600,y:250},{x:700,y:700},{x:500,y:700}
-    ]
-  },
-  { // Nivel 4 (final, más largo)
-    width: 900, height: 900, exit:{x:820,y:820},
-    walls:[
-      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
-      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
-      {x:200,y:200,w:20,h:500},{x:400,y:200,w:20,h:500},{x:600,y:200,w:20,h:500},
-      {x:200,y:400,w:400,h:20},{x:300,y:600,w:400,h:20}
-    ],
-    potions:[
-      {x:150,y:150},{x:350,y:250},{x:550,y:350},{x:700,y:500},{x:400,y:650},{x:200,y:700},{x:650,y:200}
-    ]
+player.style.left = posX + 'px';
+player.style.top = posY + 'px';
+
+// ------------------- GENERADOR ALEATORIO -------------------
+
+function crearLaberintoAleatorio() {
+  game.querySelectorAll('.wall, .potion').forEach(e => e.remove());
+
+  // Bordes del mapa
+  const bordes = [
+    {x:0, y:0, w:800, h:20},
+    {x:0, y:0, w:20, h:800},
+    {x:780, y:0, w:20, h:800},
+    {x:0, y:780, w:800, h:20},
+  ];
+
+  bordes.forEach(w => crearPared(w.x, w.y, w.w, w.h));
+
+  // Paredes internas aleatorias
+  const cantidadParedes = 10 + level * 3;
+  for (let i = 0; i < cantidadParedes; i++) {
+    const w = Math.random() < 0.5 ? 20 : 200 + Math.random() * 200;
+    const h = w === 20 ? 200 + Math.random() * 400 : 20;
+    const x = 40 + Math.random() * (760 - w);
+    const y = 40 + Math.random() * (760 - h);
+    crearPared(x, y, w, h);
   }
-];
 
-// Inicializar juego
-function startLevel(n) {
-  game.innerHTML = '';
-  walls = [];
-  potions = [];
-  gameOver = false;
-  size = 1;
-  timeLeft = 60;
-  timerEl.textContent = timeLeft;
-  levelEl.textContent = n;
-  const config = levelConfigs[n-1];
+  // Pociones
+  const cantidadPociones = 5 + Math.floor(level * 2);
+  for (let i = 0; i < cantidadPociones; i++) {
+    const px = 50 + Math.random() * 700;
+    const py = 50 + Math.random() * 700;
+    crearPocion(px, py);
+  }
 
-  // Crear paredes
-  config.walls.forEach(w=>{
-    const wall = document.createElement('div');
-    wall.className = 'wall';
-    wall.style.left = w.x+'px';
-    wall.style.top = w.y+'px';
-    wall.style.width = w.w+'px';
-    wall.style.height = w.h+'px';
-    game.appendChild(wall);
-    walls.push(wall);
-  });
-
-  // Crear pociones
-  config.potions.forEach(p=>{
-    const pot = document.createElement('div');
-    pot.className = 'potion';
-    pot.textContent = '💧';
-    pot.style.left = p.x+'px';
-    pot.style.top = p.y+'px';
-    game.appendChild(pot);
-    potions.push(pot);
-  });
-
-  // Jugador y salida
-  player = document.createElement('div');
-  player.id = 'player';
-  player.textContent = '👧';
-  game.appendChild(player);
-  posX = 40; posY = 40;
-  player.style.left = posX+'px';
-  player.style.top = posY+'px';
-
-  exit = document.createElement('div');
-  exit.id = 'exit';
-  exit.textContent = '🚪';
-  exit.style.left = config.exit.x+'px';
-  exit.style.top = config.exit.y+'px';
-  game.appendChild(exit);
+  // Salida aleatoria (más lejos cuanto más nivel)
+  const ex = 600 + Math.random() * 150;
+  const ey = 600 + Math.random() * 150;
+  exit.style.left = ex + 'px';
+  exit.style.top = ey + 'px';
 }
 
-function checkCollision(x,y){
-  const playerRect = {left:x,top:y,right:x+40*size,bottom:y+40*size};
-  for(const wall of walls){
-    const wallRect = {left:wall.offsetLeft,top:wall.offsetTop,right:wall.offsetLeft+wall.offsetWidth,bottom:wall.offsetTop+wall.offsetHeight};
-    if(playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top){
-      return true;
+function crearPared(x, y, w, h) {
+  const div = document.createElement('div');
+  div.className = 'wall';
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  div.style.width = w + 'px';
+  div.style.height = h + 'px';
+  game.appendChild(div);
+}
+
+function crearPocion(x, y) {
+  const div = document.createElement('div');
+  div.className = 'potion';
+  div.textContent = '💧';
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  game.appendChild(div);
+}
+
+// ------------------- MECÁNICA DEL JUEGO -------------------
+
+function startLevel() {
+  crearLaberintoAleatorio();
+  timeLeft = 15;
+  timerEl.textContent = timeLeft;
+  countdown.textContent = '3';
+  countdown.style.display = 'block';
+  let c = 3;
+  let interval = setInterval(() => {
+    c--;
+    if (c > 0) countdown.textContent = c;
+    else if (c === 0) countdown.textContent = '¡Vamos!';
+    else {
+      clearInterval(interval);
+      countdown.style.display = 'none';
+      playing = true;
+      startTimers();
     }
+  }, 1000);
+}
+
+function startTimers() {
+  potionTimer = setInterval(() => {
+    if (gameOver || !playing) return;
+    timeLeft--;
+    timerEl.textContent = timeLeft;
+    if (timeLeft <= 0) {
+      endGame('⏰ Se acabó el tiempo, Alicia quedó atrapada');
+    }
+  }, 1000);
+
+  growing = setInterval(() => {
+    if (gameOver || !playing) return;
+    size += 0.07;
+    player.style.transform = 'scale(' + size + ')';
+    if (size >= 2) {
+      endGame('😢 Alicia creció demasiado y quedó atrapada');
+    }
+  }, 1000);
+}
+
+function endGame(msg) {
+  gameOver = true;
+  playing = false;
+  clearInterval(potionTimer);
+  clearInterval(growing);
+  message.style.display = 'block';
+  message.textContent = msg;
+
+  setTimeout(() => {
+    message.style.display = 'none';
+    if (level < 5) {
+      level++;
+      levelEl.textContent = level;
+      gameOver = false;
+      size = 1;
+      startLevel();
+    } else {
+      message.style.display = 'block';
+      message.textContent = '🏁 ¡Ganaste todos los niveles!';
+    }
+  }, 3000);
+}
+
+function checkCollision(x, y) {
+  const playerRect = { left: x, top: y, right: x + 40 * size, bottom: y + 40 * size };
+  const walls = document.querySelectorAll('.wall');
+  for (const wall of walls) {
+    const rect = wall.getBoundingClientRect();
+    const g = game.getBoundingClientRect();
+    const wallRect = { left: rect.left - g.left, top: rect.top - g.top, right: rect.right - g.left, bottom: rect.bottom - g.top };
+    if (playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top)
+      return true;
   }
   return false;
 }
 
-document.addEventListener('keydown', e=>{
-  if(gameOver) return;
-  let nextX = posX;
-  let nextY = posY;
-  let currentSpeed = baseSpeed / size;
-  if(e.key==='ArrowUp'||e.key==='w') nextY-=currentSpeed;
-  if(e.key==='ArrowDown'||e.key==='s') nextY+=currentSpeed;
-  if(e.key==='ArrowLeft'||e.key==='a') nextX-=currentSpeed;
-  if(e.key==='ArrowRight'||e.key==='d') nextX+=currentSpeed;
-  if(!checkCollision(nextX,nextY)){
-    posX=nextX; posY=nextY;
-    player.style.left=posX+'px';
-    player.style.top=posY+'px';
+document.addEventListener('keydown', e => {
+  if (!playing || gameOver) return;
+  let nextX = posX, nextY = posY;
+  if (e.key === 'ArrowUp' || e.key === 'w') nextY -= speed;
+  if (e.key === 'ArrowDown' || e.key === 's') nextY += speed;
+  if (e.key === 'ArrowLeft' || e.key === 'a') nextX -= speed;
+  if (e.key === 'ArrowRight' || e.key === 'd') nextX += speed;
+  if (!checkCollision(nextX, nextY)) {
+    posX = nextX;
+    posY = nextY;
+    player.style.left = posX + 'px';
+    player.style.top = posY + 'px';
     checkPotion();
     checkExit();
   }
 });
 
-function checkPotion(){
+function checkPotion() {
   const pRect = player.getBoundingClientRect();
-  potions.forEach(p=>{
+  document.querySelectorAll('.potion').forEach(p => {
     const rect = p.getBoundingClientRect();
-    if(p.style.display!=='none' && 
-       pRect.x < rect.x + rect.width && 
-       pRect.x + pRect.width > rect.x && 
-       pRect.y < rect.y + rect.height && 
-       pRect.y + pRect.height > rect.y){
-      p.style.display='none';
-      size=1; player.style.transform='scale(1)';
-      player.style.filter='brightness(2)';
-      setTimeout(()=>player.style.filter='brightness(1)',300);
-      timeLeft+=10;
-      timerEl.textContent=timeLeft;
+    if (p.style.display !== 'none' && pRect.x < pRect.width + rect.x && pRect.x + pRect.width > rect.x && pRect.y < pRect.height + rect.y && pRect.y + pRect.height > rect.y) {
+      p.style.display = 'none';
+      size = 1;
+      player.style.transform = 'scale(1)';
+      timeLeft = 15;
+      timerEl.textContent = timeLeft;
     }
   });
 }
 
-function checkExit(){
+function checkExit() {
   const pRect = player.getBoundingClientRect();
   const eRect = exit.getBoundingClientRect();
-  if(pRect.x < eRect.x + eRect.width &&
-     pRect.x + pRect.width > eRect.x &&
-     pRect.y < eRect.y + eRect.height &&
-     pRect.y + pRect.height > eRect.y){
-    if(level < 4){
-      message.textContent = '✅ ¡Nivel superado!';
-      message.style.display = 'block';
-      setTimeout(()=>{
-        message.style.display='none';
-        level++;
-        startLevel(level);
-      },2000);
-    } else {
-      endGame('🎉 ¡Ganaste todos los niveles! Alicia escapó del laberinto.');
-    }
+  if (pRect.x < pRect.width + eRect.x && pRect.x + pRect.width > eRect.x && pRect.y < pRect.height + eRect.y && pRect.y + pRect.height > eRect.y) {
+    endGame('🎉 ¡Lograste salir del laberinto!');
   }
 }
-
-function endGame(text){
-  gameOver = true;
-  message.textContent = text;
-  message.style.display = 'block';
-  restartBtn.style.display = 'block';
-}
-
-restartBtn.addEventListener('click', ()=>location.reload());
-
-// Alicia crece cada 15 segundos
-setInterval(()=>{
-  if(gameOver) return;
-  size += 0.1;
-  player.style.transform='scale('+size+')';
-  if(size>=2){
-    endGame('😢 Alicia creció demasiado y quedó atrapada');
-  }
-},15000);
-
-// Temporizador
-setInterval(()=>{
-  if(gameOver) return;
-  timeLeft--;
-  timerEl.textContent = timeLeft;
-  if(timeLeft<=0){
-    endGame('⏰ Se acabó el tiempo, Alicia quedó atrapada');
-  }
-},1000);
 
 // Iniciar primer nivel
-startLevel(level);
+startLevel();
 </script>
 </body>
 </html>
