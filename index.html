@@ -217,12 +217,18 @@ function startTimers() {
     }
   }, 1000);
 
+  // CRECIMIENTO CADA 5 SEGUNDOS (antes era 1)
+  let growthCounter = 0;
   growing = setInterval(() => {
     if (gameOver || !playing) return;
-    size += 0.07;
-    player.style.transform = 'scale(' + size + ')';
-    if (size >= 2) {
-      endGame('😢 Alicia creció demasiado y quedó atrapada');
+    growthCounter++;
+    if (growthCounter >= 5) {
+      size += 0.07;
+      player.style.transform = 'scale(' + size + ')';
+      growthCounter = 0;
+      if (size >= 2) {
+        endGame('😢 Alicia creció demasiado y quedó atrapada');
+      }
     }
   }, 1000);
 }
@@ -302,7 +308,8 @@ function checkExit() {
   }
 }
 
-// Iniciar primer nivel
+// Iniciar directamente el nivel 1 sin vacío previo
+levelEl.textContent = level;
 startLevel();
 </script>
 </body>
