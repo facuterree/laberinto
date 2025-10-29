@@ -8,24 +8,32 @@
   body {
     margin: 0;
     background-color: #000;
-    font-family: sans-serif;
+    font-family: "Trebuchet MS", sans-serif;
     overflow: hidden;
+  }
+
+  #hud {
+    color: #fff;
+    font-size: 20px;
+    text-align: center;
+    margin-top: 10px;
   }
 
   #game {
     position: relative;
-    width: 800px;
-    height: 800px;
+    width: 900px;
+    height: 900px;
     margin: 20px auto;
-    background: url('https://i.imgur.com/tD3pU1F.jpg') no-repeat center center/cover;
+    background: url('https://i.imgur.com/qyjZs5U.jpeg') no-repeat center center/cover;
     border: 3px solid #fff;
-    box-shadow: 0 0 20px #0ff;
+    box-shadow: 0 0 25px #0ff;
+    overflow: hidden;
   }
 
   .wall {
     position: absolute;
-    background-color: rgba(50,50,50,0.8);
-    border: 2px solid #555;
+    background-color: rgba(40,40,40,0.8);
+    border: 1px solid #777;
   }
 
   .potion {
@@ -35,7 +43,6 @@
     font-size: 24px;
     text-align: center;
     line-height: 30px;
-    cursor: pointer;
   }
 
   #player {
@@ -57,23 +64,16 @@
     line-height: 50px;
   }
 
-  #hud {
-    color: #fff;
-    font-size: 20px;
-    text-align: center;
-    margin-bottom: 10px;
-  }
-
   #message {
     position: absolute;
-    top: 50%;
+    top: 45%;
     left: 50%;
     transform: translate(-50%, -50%);
     color: #fff;
     font-size: 32px;
     text-align: center;
     display: none;
-    background: rgba(0,0,0,0.8);
+    background: rgba(0,0,0,0.85);
     padding: 20px;
     border-radius: 15px;
   }
@@ -81,7 +81,7 @@
   #restart {
     display: none;
     position: absolute;
-    top: 65%;
+    top: 63%;
     left: 50%;
     transform: translate(-50%, -50%);
     background-color: #222;
@@ -99,62 +99,129 @@
 </style>
 </head>
 <body>
-<div id="hud">⏰ Tiempo: <span id="timer">60</span>s</div>
-<div id="game">
-  <div id="player">👧</div>
-  <div id="exit">🚪</div>
-  <div class="potion" style="left:150px; top:150px;">💧</div>
-  <div class="potion" style="left:600px; top:100px;">💧</div>
-  <div class="potion" style="left:300px; top:600px;">💧</div>
-  <div class="potion" style="left:700px; top:700px;">💧</div>
-
-  <!-- Paredes externas -->
-  <div class="wall" style="left:0; top:0; width:800px; height:20px;"></div>
-  <div class="wall" style="left:0; top:0; width:20px; height:800px;"></div>
-  <div class="wall" style="left:0; bottom:0; width:800px; height:20px;"></div>
-  <div class="wall" style="right:0; top:0; width:20px; height:800px;"></div>
-
-  <!-- Pasillos internos -->
-  <div class="wall" style="left:100px; top:100px; width:600px; height:20px;"></div>
-  <div class="wall" style="left:100px; top:100px; width:20px; height:600px;"></div>
-  <div class="wall" style="left:680px; top:100px; width:20px; height:600px;"></div>
-  <div class="wall" style="left:100px; top:680px; width:600px; height:20px;"></div>
-  <div class="wall" style="left:300px; top:200px; width:20px; height:400px;"></div>
-  <div class="wall" style="left:500px; top:200px; width:20px; height:400px;"></div>
-</div>
-
+<div id="hud">⏰ Tiempo: <span id="timer">60</span>s | Nivel: <span id="level">1</span>/4</div>
+<div id="game"></div>
 <div id="message"></div>
 <button id="restart">🔁 Reiniciar</button>
 
 <script>
-const player = document.getElementById('player');
-const exit = document.getElementById('exit');
-const potions = document.querySelectorAll('.potion');
-const walls = document.querySelectorAll('.wall');
+const game = document.getElementById('game');
 const timerEl = document.getElementById('timer');
 const message = document.getElementById('message');
 const restartBtn = document.getElementById('restart');
+const levelEl = document.getElementById('level');
 
-let posX = 50, posY = 50;
+let posX, posY, player, exit, walls = [], potions = [];
 let baseSpeed = 10;
 let size = 1;
 let timeLeft = 60;
+let level = 1;
 let gameOver = false;
 
-player.style.left = posX + 'px';
-player.style.top = posY + 'px';
-exit.style.left = '720px';
-exit.style.top = '720px';
+const levelConfigs = [
+  { // Nivel 1: básico y grande
+    width: 900, height: 900, exit:{x:800,y:800},
+    walls:[
+      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
+      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
+      {x:250,y:200,w:20,h:500},{x:450,y:200,w:20,h:500},{x:650,y:200,w:20,h:500}
+    ],
+    potions:[
+      {x:150,y:150},{x:250,y:250},{x:400,y:150},{x:600,y:300},{x:700,y:700},{x:500,y:500},{x:800,y:200}
+    ]
+  },
+  { // Nivel 2
+    width: 900, height: 900, exit:{x:820,y:820},
+    walls:[
+      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
+      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
+      {x:300,y:200,w:20,h:500},{x:500,y:300,w:20,h:400},{x:200,y:400,w:600,h:20}
+    ],
+    potions:[
+      {x:150,y:150},{x:350,y:250},{x:550,y:450},{x:650,y:650},{x:700,y:300},{x:250,y:600}
+    ]
+  },
+  { // Nivel 3
+    width: 900, height: 900, exit:{x:820,y:820},
+    walls:[
+      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
+      {x:150,y:150,w:600,h:20},{x:150,y:150,w:20,h:600},{x:750,y:150,w:20,h:600},{x:150,y:750,w:600,h:20},
+      {x:350,y:200,w:20,h:500},{x:550,y:200,w:20,h:500},{x:250,y:400,w:400,h:20}
+    ],
+    potions:[
+      {x:200,y:200},{x:300,y:300},{x:400,y:500},{x:600,y:250},{x:700,y:700},{x:500,y:700}
+    ]
+  },
+  { // Nivel 4 (final, más largo)
+    width: 900, height: 900, exit:{x:820,y:820},
+    walls:[
+      {x:0,y:0,w:900,h:20},{x:0,y:0,w:20,h:900},{x:0,y:880,w:900,h:20},{x:880,y:0,w:20,h:900},
+      {x:100,y:100,w:700,h:20},{x:100,y:100,w:20,h:700},{x:780,y:100,w:20,h:700},{x:100,y:780,w:700,h:20},
+      {x:200,y:200,w:20,h:500},{x:400,y:200,w:20,h:500},{x:600,y:200,w:20,h:500},
+      {x:200,y:400,w:400,h:20},{x:300,y:600,w:400,h:20}
+    ],
+    potions:[
+      {x:150,y:150},{x:350,y:250},{x:550,y:350},{x:700,y:500},{x:400,y:650},{x:200,y:700},{x:650,y:200}
+    ]
+  }
+];
 
-function checkCollision(x, y) {
-  const playerRect = {left:x, top:y, right:x+40*size, bottom:y+40*size};
+// Inicializar juego
+function startLevel(n) {
+  game.innerHTML = '';
+  walls = [];
+  potions = [];
+  gameOver = false;
+  size = 1;
+  timeLeft = 60;
+  timerEl.textContent = timeLeft;
+  levelEl.textContent = n;
+  const config = levelConfigs[n-1];
+
+  // Crear paredes
+  config.walls.forEach(w=>{
+    const wall = document.createElement('div');
+    wall.className = 'wall';
+    wall.style.left = w.x+'px';
+    wall.style.top = w.y+'px';
+    wall.style.width = w.w+'px';
+    wall.style.height = w.h+'px';
+    game.appendChild(wall);
+    walls.push(wall);
+  });
+
+  // Crear pociones
+  config.potions.forEach(p=>{
+    const pot = document.createElement('div');
+    pot.className = 'potion';
+    pot.textContent = '💧';
+    pot.style.left = p.x+'px';
+    pot.style.top = p.y+'px';
+    game.appendChild(pot);
+    potions.push(pot);
+  });
+
+  // Jugador y salida
+  player = document.createElement('div');
+  player.id = 'player';
+  player.textContent = '👧';
+  game.appendChild(player);
+  posX = 40; posY = 40;
+  player.style.left = posX+'px';
+  player.style.top = posY+'px';
+
+  exit = document.createElement('div');
+  exit.id = 'exit';
+  exit.textContent = '🚪';
+  exit.style.left = config.exit.x+'px';
+  exit.style.top = config.exit.y+'px';
+  game.appendChild(exit);
+}
+
+function checkCollision(x,y){
+  const playerRect = {left:x,top:y,right:x+40*size,bottom:y+40*size};
   for(const wall of walls){
-    const wallRect = {
-      left: wall.offsetLeft,
-      top: wall.offsetTop,
-      right: wall.offsetLeft + wall.offsetWidth,
-      bottom: wall.offsetTop + wall.offsetHeight
-    };
+    const wallRect = {left:wall.offsetLeft,top:wall.offsetTop,right:wall.offsetLeft+wall.offsetWidth,bottom:wall.offsetTop+wall.offsetHeight};
     if(playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top){
       return true;
     }
@@ -162,11 +229,11 @@ function checkCollision(x, y) {
   return false;
 }
 
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', e=>{
   if(gameOver) return;
   let nextX = posX;
   let nextY = posY;
-  let currentSpeed = baseSpeed / size; // más grande → más lento
+  let currentSpeed = baseSpeed / size;
   if(e.key==='ArrowUp'||e.key==='w') nextY-=currentSpeed;
   if(e.key==='ArrowDown'||e.key==='s') nextY+=currentSpeed;
   if(e.key==='ArrowLeft'||e.key==='a') nextX-=currentSpeed;
@@ -190,12 +257,11 @@ function checkPotion(){
        pRect.y < rect.y + rect.height && 
        pRect.y + pRect.height > rect.y){
       p.style.display='none';
-      size = 1; 
-      player.style.transform='scale(1)';
-      player.style.filter = 'brightness(2)';
-      setTimeout(()=>player.style.filter='brightness(1)', 300);
-      timeLeft += 10; 
-      timerEl.textContent = timeLeft;
+      size=1; player.style.transform='scale(1)';
+      player.style.filter='brightness(2)';
+      setTimeout(()=>player.style.filter='brightness(1)',300);
+      timeLeft+=10;
+      timerEl.textContent=timeLeft;
     }
   });
 }
@@ -203,11 +269,21 @@ function checkPotion(){
 function checkExit(){
   const pRect = player.getBoundingClientRect();
   const eRect = exit.getBoundingClientRect();
-  if(pRect.x < eRect.x + eRect.width && 
-     pRect.x + pRect.width > eRect.x && 
-     pRect.y < eRect.y + eRect.height && 
+  if(pRect.x < eRect.x + eRect.width &&
+     pRect.x + pRect.width > eRect.x &&
+     pRect.y < eRect.y + eRect.height &&
      pRect.y + pRect.height > eRect.y){
-    endGame('🎉 ¡Felicidades, lograste que Alicia salga del laberinto!');
+    if(level < 4){
+      message.textContent = '✅ ¡Nivel superado!';
+      message.style.display = 'block';
+      setTimeout(()=>{
+        message.style.display='none';
+        level++;
+        startLevel(level);
+      },2000);
+    } else {
+      endGame('🎉 ¡Ganaste todos los niveles! Alicia escapó del laberinto.');
+    }
   }
 }
 
@@ -220,23 +296,28 @@ function endGame(text){
 
 restartBtn.addEventListener('click', ()=>location.reload());
 
-const growthInterval = setInterval(()=>{
+// Alicia crece cada 15 segundos
+setInterval(()=>{
   if(gameOver) return;
-  size += 0.05;
-  player.style.transform = 'scale('+size+')';
-  if(size >= 2){
+  size += 0.1;
+  player.style.transform='scale('+size+')';
+  if(size>=2){
     endGame('😢 Alicia creció demasiado y quedó atrapada');
   }
-}, 4000);
+},15000);
 
-const timerInterval = setInterval(()=>{
+// Temporizador
+setInterval(()=>{
   if(gameOver) return;
   timeLeft--;
   timerEl.textContent = timeLeft;
-  if(timeLeft <= 0){
+  if(timeLeft<=0){
     endGame('⏰ Se acabó el tiempo, Alicia quedó atrapada');
   }
-}, 1000);
+},1000);
+
+// Iniciar primer nivel
+startLevel(level);
 </script>
 </body>
 </html>
