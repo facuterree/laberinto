@@ -13,18 +13,18 @@
   }
 
   #game {
-  position: relative;
-  width: 800px;
-  height: 800px;
-  margin: 20px auto;
-  background: url('https://i.imgur.com/tD3pU1F.jpg') no-repeat center center/cover;
-  border: 3px solid #fff;
-  box-shadow: 0 0 20px #0ff;
+    position: relative;
+    width: 800px;
+    height: 800px;
+    margin: 20px auto;
+    background: url('https://i.imgur.com/tD3pU1F.jpg') no-repeat center center/cover;
+    border: 3px solid #fff;
+    box-shadow: 0 0 20px #0ff;
   }
 
   .wall {
     position: absolute;
-    background-color: #333;
+    background-color: rgba(50,50,50,0.8);
     border: 2px solid #555;
   }
 
@@ -35,6 +35,7 @@
     font-size: 24px;
     text-align: center;
     line-height: 30px;
+    cursor: pointer;
   }
 
   #player {
@@ -44,6 +45,7 @@
     font-size: 32px;
     text-align: center;
     line-height: 40px;
+    transition: transform 0.3s, filter 0.3s;
   }
 
   #exit {
@@ -75,6 +77,25 @@
     padding: 20px;
     border-radius: 15px;
   }
+
+  #restart {
+    display: none;
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #222;
+    color: #fff;
+    border: 2px solid #fff;
+    padding: 10px 20px;
+    font-size: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  #restart:hover {
+    background-color: #444;
+  }
 </style>
 </head>
 <body>
@@ -86,10 +107,13 @@
   <div class="potion" style="left:600px; top:100px;">💧</div>
   <div class="potion" style="left:300px; top:600px;">💧</div>
   <div class="potion" style="left:700px; top:700px;">💧</div>
+
+  <!-- Paredes externas -->
   <div class="wall" style="left:0; top:0; width:800px; height:20px;"></div>
   <div class="wall" style="left:0; top:0; width:20px; height:800px;"></div>
   <div class="wall" style="left:0; bottom:0; width:800px; height:20px;"></div>
   <div class="wall" style="right:0; top:0; width:20px; height:800px;"></div>
+
   <!-- Pasillos internos -->
   <div class="wall" style="left:100px; top:100px; width:600px; height:20px;"></div>
   <div class="wall" style="left:100px; top:100px; width:20px; height:600px;"></div>
@@ -98,7 +122,10 @@
   <div class="wall" style="left:300px; top:200px; width:20px; height:400px;"></div>
   <div class="wall" style="left:500px; top:200px; width:20px; height:400px;"></div>
 </div>
+
 <div id="message"></div>
+<button id="restart">🔁 Reiniciar</button>
+
 <script>
 const player = document.getElementById('player');
 const exit = document.getElementById('exit');
@@ -106,9 +133,10 @@ const potions = document.querySelectorAll('.potion');
 const walls = document.querySelectorAll('.wall');
 const timerEl = document.getElementById('timer');
 const message = document.getElementById('message');
+const restartBtn = document.getElementById('restart');
 
 let posX = 50, posY = 50;
-let speed = 10;
+let baseSpeed = 10;
 let size = 1;
 let timeLeft = 60;
 let gameOver = false;
@@ -121,9 +149,12 @@ exit.style.top = '720px';
 function checkCollision(x, y) {
   const playerRect = {left:x, top:y, right:x+40*size, bottom:y+40*size};
   for(const wall of walls){
-    const rect = wall.getBoundingClientRect();
-    const g = wall.parentElement.getBoundingClientRect();
-    const wallRect = {left:rect.left-g.left, top:rect.top-g.top, right:rect.right-g.left, bottom:rect.bottom-g.top};
+    const wallRect = {
+      left: wall.offsetLeft,
+      top: wall.offsetTop,
+      right: wall.offsetLeft + wall.offsetWidth,
+      bottom: wall.offsetTop + wall.offsetHeight
+    };
     if(playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top){
       return true;
     }
@@ -135,10 +166,11 @@ document.addEventListener('keydown', e => {
   if(gameOver) return;
   let nextX = posX;
   let nextY = posY;
-  if(e.key==='ArrowUp'||e.key==='w') nextY-=speed;
-  if(e.key==='ArrowDown'||e.key==='s') nextY+=speed;
-  if(e.key==='ArrowLeft'||e.key==='a') nextX-=speed;
-  if(e.key==='ArrowRight'||e.key==='d') nextX+=speed;
+  let currentSpeed = baseSpeed / size; // más grande → más lento
+  if(e.key==='ArrowUp'||e.key==='w') nextY-=currentSpeed;
+  if(e.key==='ArrowDown'||e.key==='s') nextY+=currentSpeed;
+  if(e.key==='ArrowLeft'||e.key==='a') nextX-=currentSpeed;
+  if(e.key==='ArrowRight'||e.key==='d') nextX+=currentSpeed;
   if(!checkCollision(nextX,nextY)){
     posX=nextX; posY=nextY;
     player.style.left=posX+'px';
@@ -152,10 +184,18 @@ function checkPotion(){
   const pRect = player.getBoundingClientRect();
   potions.forEach(p=>{
     const rect = p.getBoundingClientRect();
-    if(p.style.display!=='none' && pRect.x<pRect.width+rect.x && pRect.x+pRect.width>rect.x && pRect.y<pRect.height+rect.y && pRect.y+pRect.height>rect.y){
+    if(p.style.display!=='none' && 
+       pRect.x < rect.x + rect.width && 
+       pRect.x + pRect.width > rect.x && 
+       pRect.y < rect.y + rect.height && 
+       pRect.y + pRect.height > rect.y){
       p.style.display='none';
-      size=1; player.style.transform='scale(1)';
-      timeLeft+=10; timerEl.textContent=timeLeft;
+      size = 1; 
+      player.style.transform='scale(1)';
+      player.style.filter = 'brightness(2)';
+      setTimeout(()=>player.style.filter='brightness(1)', 300);
+      timeLeft += 10; 
+      timerEl.textContent = timeLeft;
     }
   });
 }
@@ -163,34 +203,40 @@ function checkPotion(){
 function checkExit(){
   const pRect = player.getBoundingClientRect();
   const eRect = exit.getBoundingClientRect();
-  if(pRect.x<pRect.width+eRect.x && pRect.x+pRect.width>eRect.x && pRect.y<pRect.height+eRect.y && pRect.y+pRect.height>eRect.y){
-    gameOver=true;
-    message.style.display='block';
-    message.textContent='🎉 ¡Felicidades, lograste que Alicia salga del laberinto!';
+  if(pRect.x < eRect.x + eRect.width && 
+     pRect.x + pRect.width > eRect.x && 
+     pRect.y < eRect.y + eRect.height && 
+     pRect.y + pRect.height > eRect.y){
+    endGame('🎉 ¡Felicidades, lograste que Alicia salga del laberinto!');
   }
 }
 
+function endGame(text){
+  gameOver = true;
+  message.textContent = text;
+  message.style.display = 'block';
+  restartBtn.style.display = 'block';
+}
+
+restartBtn.addEventListener('click', ()=>location.reload());
+
 const growthInterval = setInterval(()=>{
   if(gameOver) return;
-  size+=0.05;
-  player.style.transform='scale('+size+')';
-  if(size>=2){
-    gameOver=true;
-    message.style.display='block';
-    message.textContent='😢 Alicia creció demasiado y quedó atrapada';
+  size += 0.05;
+  player.style.transform = 'scale('+size+')';
+  if(size >= 2){
+    endGame('😢 Alicia creció demasiado y quedó atrapada');
   }
-},4000);
+}, 4000);
 
 const timerInterval = setInterval(()=>{
   if(gameOver) return;
   timeLeft--;
-  timerEl.textContent=timeLeft;
-  if(timeLeft<=0){
-    gameOver=true;
-    message.style.display='block';
-    message.textContent='⏰ Se acabó el tiempo, Alicia quedó atrapada';
+  timerEl.textContent = timeLeft;
+  if(timeLeft <= 0){
+    endGame('⏰ Se acabó el tiempo, Alicia quedó atrapada');
   }
-},1000);
+}, 1000);
 </script>
 </body>
 </html>
