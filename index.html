@@ -1,316 +1,286 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Laberinto de Alicia (aleatorio)</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Alicia en el laberinto</title>
 <style>
   body {
     margin: 0;
-    background-color: #000;
-    font-family: 'Trebuchet MS', sans-serif;
     overflow: hidden;
-    color: white;
+    background: url('https://i.imgur.com/pwYQJkB.jpeg') center/cover no-repeat;
   }
-
-  #game {
-    position: relative;
-    width: 800px;
-    height: 800px;
-    margin: 20px auto;
-    border: 3px solid #fff;
-    background-image: url('https://i.imgur.com/jJ8rWvW.jpeg');
-    background-size: cover;
-    background-position: center;
-    box-shadow: 0 0 40px rgba(255,255,255,0.3);
+  canvas {
+    display: block;
+    margin: 0 auto;
+    background: rgba(0, 0, 0, 0.5);
+    border: 4px solid #00ffff;
   }
-
-  .wall {
-    position: absolute;
-    background-color: rgba(20, 20, 20, 0.85);
-    border: 2px solid #555;
-  }
-
-  .potion {
-    position: absolute;
-    width: 30px;
-    height: 30px;
-    font-size: 24px;
-    text-align: center;
-    line-height: 30px;
-  }
-
-  #player {
-    position: absolute;
-    width: 40px;
-    height: 40px;
-    font-size: 32px;
-    text-align: center;
-    line-height: 40px;
-    transition: transform 0.2s ease;
-  }
-
-  #exit {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    font-size: 48px;
-    text-align: center;
-    line-height: 50px;
-  }
-
-  #hud {
-    color: #fff;
-    font-size: 20px;
-    text-align: center;
-    margin-bottom: 10px;
-  }
-
-  #message {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: #fff;
-    font-size: 32px;
-    text-align: center;
-    display: none;
-    background: rgba(0,0,0,0.8);
-    padding: 20px;
-    border-radius: 15px;
-  }
-
   #countdown {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 64px;
+    font-size: 80px;
     color: #fff;
-    background: rgba(0,0,0,0.7);
-    padding: 20px 40px;
-    border-radius: 20px;
+    text-shadow: 2px 2px 10px black;
+    font-family: "Comic Sans MS", cursive;
+  }
+  #level {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 22px;
+    font-family: sans-serif;
+  }
+  #message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: yellow;
+    font-size: 36px;
+    font-family: "Comic Sans MS", cursive;
+    display: none;
   }
 </style>
 </head>
 <body>
-<div id="hud">
-  ⏰ Tiempo: <span id="timer">15</span>s — Nivel: <span id="level">1</span>
-</div>
-<div id="game">
-  <div id="player">👧</div>
-  <div id="exit">🚪</div>
-  <div id="message"></div>
-  <div id="countdown">3</div>
-</div>
+<canvas id="gameCanvas" width="700" height="500"></canvas>
+<div id="countdown"></div>
+<div id="level">Nivel: 1</div>
+<div id="message">¡Felicidades, lograste que Alicia salga del laberinto!</div>
 
 <script>
-const game = document.getElementById('game');
-const player = document.getElementById('player');
-const exit = document.getElementById('exit');
-const timerEl = document.getElementById('timer');
-const levelEl = document.getElementById('level');
-const message = document.getElementById('message');
-const countdown = document.getElementById('countdown');
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const countdownEl = document.getElementById("countdown");
+const levelEl = document.getElementById("level");
+const messageEl = document.getElementById("message");
 
-let posX = 50, posY = 50;
-let speed = 10;
-let size = 1;
-let timeLeft = 15;
-let gameOver = false;
+let gridSize = 20;
+let maze = [];
 let level = 1;
-let potionTimer = null;
-let growing = null;
-let playing = false;
+let player = { x: 0, y: 0, size: 1 };
+let potions = [];
+let door = {};
+let keys = {};
+let canMove = false;
+let growTimer = 0;
+let growthInterval = 5;
+let potionTime = 15;
+let timer = 0;
 
-player.style.left = posX + 'px';
-player.style.top = posY + 'px';
+function generateMaze(rows, cols) {
+  const maze = Array(rows)
+    .fill(null)
+    .map(() => Array(cols).fill(1));
+  const stack = [];
+  const startRow = Math.floor(Math.random() * rows);
+  const startCol = Math.floor(Math.random() * cols);
+  maze[startRow][startCol] = 0;
+  stack.push([startRow, startCol]);
 
-// ------------------- GENERADOR ALEATORIO -------------------
-
-function crearLaberintoAleatorio() {
-  game.querySelectorAll('.wall, .potion').forEach(e => e.remove());
-
-  // Bordes del mapa
-  const bordes = [
-    {x:0, y:0, w:800, h:20},
-    {x:0, y:0, w:20, h:800},
-    {x:780, y:0, w:20, h:800},
-    {x:0, y:780, w:800, h:20},
+  const dirs = [
+    [0, 2],
+    [0, -2],
+    [2, 0],
+    [-2, 0]
   ];
 
-  bordes.forEach(w => crearPared(w.x, w.y, w.w, w.h));
-
-  // Paredes internas aleatorias
-  const cantidadParedes = 10 + level * 3;
-  for (let i = 0; i < cantidadParedes; i++) {
-    const w = Math.random() < 0.5 ? 20 : 200 + Math.random() * 200;
-    const h = w === 20 ? 200 + Math.random() * 400 : 20;
-    const x = 40 + Math.random() * (760 - w);
-    const y = 40 + Math.random() * (760 - h);
-    crearPared(x, y, w, h);
-  }
-
-  // Pociones
-  const cantidadPociones = 5 + Math.floor(level * 2);
-  for (let i = 0; i < cantidadPociones; i++) {
-    const px = 50 + Math.random() * 700;
-    const py = 50 + Math.random() * 700;
-    crearPocion(px, py);
-  }
-
-  // Salida aleatoria (más lejos cuanto más nivel)
-  const ex = 600 + Math.random() * 150;
-  const ey = 600 + Math.random() * 150;
-  exit.style.left = ex + 'px';
-  exit.style.top = ey + 'px';
-}
-
-function crearPared(x, y, w, h) {
-  const div = document.createElement('div');
-  div.className = 'wall';
-  div.style.left = x + 'px';
-  div.style.top = y + 'px';
-  div.style.width = w + 'px';
-  div.style.height = h + 'px';
-  game.appendChild(div);
-}
-
-function crearPocion(x, y) {
-  const div = document.createElement('div');
-  div.className = 'potion';
-  div.textContent = '💧';
-  div.style.left = x + 'px';
-  div.style.top = y + 'px';
-  game.appendChild(div);
-}
-
-// ------------------- MECÁNICA DEL JUEGO -------------------
-
-function startLevel() {
-  crearLaberintoAleatorio();
-  timeLeft = 15;
-  timerEl.textContent = timeLeft;
-  countdown.textContent = '3';
-  countdown.style.display = 'block';
-  let c = 3;
-  let interval = setInterval(() => {
-    c--;
-    if (c > 0) countdown.textContent = c;
-    else if (c === 0) countdown.textContent = '¡Vamos!';
-    else {
-      clearInterval(interval);
-      countdown.style.display = 'none';
-      playing = true;
-      startTimers();
-    }
-  }, 1000);
-}
-
-function startTimers() {
-  potionTimer = setInterval(() => {
-    if (gameOver || !playing) return;
-    timeLeft--;
-    timerEl.textContent = timeLeft;
-    if (timeLeft <= 0) {
-      endGame('⏰ Se acabó el tiempo, Alicia quedó atrapada');
-    }
-  }, 1000);
-
-  // CRECIMIENTO CADA 5 SEGUNDOS (antes era 1)
-  let growthCounter = 0;
-  growing = setInterval(() => {
-    if (gameOver || !playing) return;
-    growthCounter++;
-    if (growthCounter >= 5) {
-      size += 0.07;
-      player.style.transform = 'scale(' + size + ')';
-      growthCounter = 0;
-      if (size >= 2) {
-        endGame('😢 Alicia creció demasiado y quedó atrapada');
+  while (stack.length) {
+    const [r, c] = stack.pop();
+    shuffle(dirs);
+    for (const [dr, dc] of dirs) {
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr > 0 && nc > 0 && nr < rows && nc < cols && maze[nr][nc] === 1) {
+        maze[nr][nc] = 0;
+        maze[r + dr / 2][c + dc / 2] = 0;
+        stack.push([nr, nc]);
       }
     }
+  }
+  return maze;
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+function randomEmptyCell() {
+  let x, y;
+  do {
+    x = Math.floor(Math.random() * maze[0].length);
+    y = Math.floor(Math.random() * maze.length);
+  } while (maze[y][x] === 1);
+  return { x, y };
+}
+
+function startLevel() {
+  const rows = 15 + level * 2;
+  const cols = 20 + level * 2;
+  maze = generateMaze(rows, cols);
+
+  // Alicia empieza en una celda libre
+  const startCell = randomEmptyCell();
+  player.x = startCell.x;
+  player.y = startCell.y;
+  player.size = 1;
+
+  // Puerta en una celda libre alejada
+  door = randomEmptyCell();
+
+  // Generar pociones
+  potions = [];
+  const potionCount = 8 + level * 2;
+  for (let i = 0; i < potionCount; i++) {
+    potions.push(randomEmptyCell());
+  }
+
+  levelEl.textContent = "Nivel: " + level;
+  startCountdown();
+}
+
+function startCountdown() {
+  canMove = false;
+  let count = 3;
+  countdownEl.textContent = count;
+  const interval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      countdownEl.textContent = count;
+    } else if (count === 0) {
+      countdownEl.textContent = "¡Vamos!";
+    } else {
+      clearInterval(interval);
+      countdownEl.textContent = "";
+      canMove = true;
+      timer = 0;
+    }
   }, 1000);
 }
 
-function endGame(msg) {
-  gameOver = true;
-  playing = false;
-  clearInterval(potionTimer);
-  clearInterval(growing);
-  message.style.display = 'block';
-  message.textContent = msg;
-
-  setTimeout(() => {
-    message.style.display = 'none';
-    if (level < 5) {
-      level++;
-      levelEl.textContent = level;
-      gameOver = false;
-      size = 1;
-      startLevel();
-    } else {
-      message.style.display = 'block';
-      message.textContent = '🏁 ¡Ganaste todos los niveles!';
+function drawMaze() {
+  const cellW = canvas.width / maze[0].length;
+  const cellH = canvas.height / maze.length;
+  for (let y = 0; y < maze.length; y++) {
+    for (let x = 0; x < maze[y].length; x++) {
+      if (maze[y][x] === 1) {
+        ctx.fillStyle = "rgba(0,255,255,0.3)";
+        ctx.fillRect(x * cellW, y * cellH, cellW, cellH);
+      }
     }
-  }, 3000);
+  }
 }
 
-function checkCollision(x, y) {
-  const playerRect = { left: x, top: y, right: x + 40 * size, bottom: y + 40 * size };
-  const walls = document.querySelectorAll('.wall');
-  for (const wall of walls) {
-    const rect = wall.getBoundingClientRect();
-    const g = game.getBoundingClientRect();
-    const wallRect = { left: rect.left - g.left, top: rect.top - g.top, right: rect.right - g.left, bottom: rect.bottom - g.top };
-    if (playerRect.left < wallRect.right && playerRect.right > wallRect.left && playerRect.top < wallRect.bottom && playerRect.bottom > wallRect.top)
-      return true;
-  }
-  return false;
+function drawPlayer() {
+  const cellW = canvas.width / maze[0].length;
+  const cellH = canvas.height / maze.length;
+  const px = player.x * cellW;
+  const py = player.y * cellH;
+  const emoji = "👧";
+  ctx.font = `${cellH * player.size}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(emoji, px + cellW / 2, py + cellH / 2);
 }
 
-document.addEventListener('keydown', e => {
-  if (!playing || gameOver) return;
-  let nextX = posX, nextY = posY;
-  if (e.key === 'ArrowUp' || e.key === 'w') nextY -= speed;
-  if (e.key === 'ArrowDown' || e.key === 's') nextY += speed;
-  if (e.key === 'ArrowLeft' || e.key === 'a') nextX -= speed;
-  if (e.key === 'ArrowRight' || e.key === 'd') nextX += speed;
-  if (!checkCollision(nextX, nextY)) {
-    posX = nextX;
-    posY = nextY;
-    player.style.left = posX + 'px';
-    player.style.top = posY + 'px';
-    checkPotion();
-    checkExit();
+function drawPotions() {
+  const cellW = canvas.width / maze[0].length;
+  const cellH = canvas.height / maze.length;
+  for (const p of potions) {
+    ctx.fillText("💧", p.x * cellW + cellW / 2, p.y * cellH + cellH / 2);
   }
+}
+
+function drawDoor() {
+  const cellW = canvas.width / maze[0].length;
+  const cellH = canvas.height / maze.length;
+  ctx.fillText("🚪", door.x * cellW + cellW / 2, door.y * cellH + cellH / 2);
+}
+
+function move(dx, dy) {
+  if (!canMove) return;
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+  if (ny >= 0 && ny < maze.length && nx >= 0 && nx < maze[0].length) {
+    if (maze[ny][nx] === 0) {
+      player.x = nx;
+      player.y = ny;
+    }
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+});
+document.addEventListener("keyup", (e) => {
+  keys[e.key] = false;
 });
 
-function checkPotion() {
-  const pRect = player.getBoundingClientRect();
-  document.querySelectorAll('.potion').forEach(p => {
-    const rect = p.getBoundingClientRect();
-    if (p.style.display !== 'none' && pRect.x < pRect.width + rect.x && pRect.x + pRect.width > rect.x && pRect.y < pRect.height + rect.y && pRect.y + pRect.height > rect.y) {
-      p.style.display = 'none';
-      size = 1;
-      player.style.transform = 'scale(1)';
-      timeLeft = 15;
-      timerEl.textContent = timeLeft;
-    }
-  });
-}
+function update() {
+  if (canMove) {
+    if (keys["ArrowUp"]) move(0, -1);
+    if (keys["ArrowDown"]) move(0, 1);
+    if (keys["ArrowLeft"]) move(-1, 0);
+    if (keys["ArrowRight"]) move(1, 0);
 
-function checkExit() {
-  const pRect = player.getBoundingClientRect();
-  const eRect = exit.getBoundingClientRect();
-  if (pRect.x < pRect.width + eRect.x && pRect.x + pRect.width > eRect.x && pRect.y < pRect.height + eRect.y && pRect.y + pRect.height > eRect.y) {
-    endGame('🎉 ¡Lograste salir del laberinto!');
+    // Crecimiento cada 5 segundos
+    growTimer += 1 / 60;
+    if (growTimer >= growthInterval) {
+      player.size += 0.1;
+      growTimer = 0;
+    }
+
+    // Tiempo para poción
+    timer += 1 / 60;
+    if (timer >= potionTime) {
+      canMove = false;
+      alert("¡Alicia creció demasiado! Intenta de nuevo");
+      level = 1;
+      startLevel();
+    }
+
+    // Colisiones con pociones
+    potions = potions.filter((p) => {
+      if (p.x === player.x && p.y === player.y) {
+        timer = 0;
+        player.size = Math.max(1, player.size - 0.2);
+        return false;
+      }
+      return true;
+    });
+
+    // Llegar a la puerta
+    if (player.x === door.x && player.y === door.y) {
+      level++;
+      if (level > 5) {
+        messageEl.style.display = "block";
+        canMove = false;
+        return;
+      }
+      startLevel();
+    }
   }
 }
 
-// Iniciar directamente el nivel 1 sin vacío previo
-levelEl.textContent = level;
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawMaze();
+  drawDoor();
+  drawPotions();
+  drawPlayer();
+  update();
+  requestAnimationFrame(gameLoop);
+}
+
 startLevel();
+gameLoop();
 </script>
 </body>
 </html>
